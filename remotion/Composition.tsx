@@ -4,12 +4,12 @@ import { useCurrentFrame, useVideoConfig, AbsoluteFill, Audio, Img, interpolate,
 // Brain state config — matches the Cognistration machine palette
 // ---------------------------------------------------------------------------
 const STATE_INFO: Record<string, { label: string; hz: number; range: string; outcome: string; leftColor: string; rightColor: string; beatColor: string; glowColor: string }> = {
-  delta:  { label: 'Delta',   hz: 2.5,  range: '0.5–4 Hz',  outcome: 'Deep restorative sleep', leftColor: '#e2e8f0', rightColor: '#cbd5e1', beatColor: '#f1f5f9', glowColor: 'rgba(226,232,240,0.45)' },
-  theta:  { label: 'Theta',   hz: 6.0,  range: '4–8 Hz',    outcome: 'Meditation · Creative flow', leftColor: '#b6ddcc', rightColor: '#d7c7aa', beatColor: '#d7eadf', glowColor: 'rgba(182,221,204,0.55)' },
-  alpha:  { label: 'Alpha',   hz: 10.0, range: '8–13 Hz',   outcome: 'Relaxed alertness · Calm flow', leftColor: '#b6ddcc', rightColor: '#d7c7aa', beatColor: '#d7eadf', glowColor: 'rgba(182,221,204,0.55)' },
-  smr:    { label: 'SMR',     hz: 13.0, range: '12–15 Hz',  outcome: 'Sensorimotor focus', leftColor: '#a2d8d0', rightColor: '#d7c7aa', beatColor: '#c8f0e8', glowColor: 'rgba(162,216,208,0.45)' },
-  beta:   { label: 'Beta',    hz: 18.0, range: '13–30 Hz',  outcome: 'Active concentration', leftColor: '#e0b493', rightColor: '#d7c7aa', beatColor: '#f0d4b8', glowColor: 'rgba(224,180,147,0.45)' },
-  gamma:  { label: 'Gamma',   hz: 38.0, range: '30–45 Hz',  outcome: 'Cognitive synthesis', leftColor: '#d7c7aa', rightColor: '#e0b493', beatColor: '#efe0c8', glowColor: 'rgba(215,199,170,0.45)' },
+  delta:  { label: 'Delta',   hz: 2.5,  range: '0.5–4 Hz',  outcome: 'Deep sleep, inner restoration', leftColor: '#e2e8f0', rightColor: '#cbd5e1', beatColor: '#f1f5f9', glowColor: 'rgba(226,232,240,0.45)' },
+  theta:  { label: 'Theta',   hz: 6.0,  range: '4–8 Hz',    outcome: 'Meditation, creative flow, inner voice', leftColor: '#b6ddcc', rightColor: '#d7c7aa', beatColor: '#d7eadf', glowColor: 'rgba(182,221,204,0.55)' },
+  alpha:  { label: 'Alpha',   hz: 10.0, range: '8–13 Hz',   outcome: 'Calm awareness, quiet the noise', leftColor: '#b6ddcc', rightColor: '#d7c7aa', beatColor: '#d7eadf', glowColor: 'rgba(182,221,204,0.55)' },
+  smr:    { label: 'SMR',     hz: 13.0, range: '12–15 Hz',  outcome: 'Still body, sharp mind', leftColor: '#a2d8d0', rightColor: '#d7c7aa', beatColor: '#c8f0e8', glowColor: 'rgba(162,216,208,0.45)' },
+  beta:   { label: 'Beta',    hz: 18.0, range: '13–30 Hz',  outcome: 'Active focus, mental clarity', leftColor: '#e0b493', rightColor: '#d7c7aa', beatColor: '#f0d4b8', glowColor: 'rgba(224,180,147,0.45)' },
+  gamma:  { label: 'Gamma',   hz: 38.0, range: '30–45 Hz',  outcome: 'Higher awareness, connected consciousness', leftColor: '#d7c7aa', rightColor: '#e0b493', beatColor: '#efe0c8', glowColor: 'rgba(215,199,170,0.45)' },
 };
 
 interface CognistrationShortProps {
@@ -57,7 +57,7 @@ export const CognistrationShort: React.FC<CognistrationShortProps> = ({
   const outroFade = interpolate(frame, [durationInFrames - 15, durationInFrames - 1], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   const fade = introFade * outroFade;
 
-  const waveW = width - 64;
+  const waveW = width - 104;  // account for 32px outer margins + 20px inner container padding on each side
   const waveH = 140;
 
   return (
@@ -119,7 +119,7 @@ export const CognistrationShort: React.FC<CognistrationShortProps> = ({
               <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 11, color: state.leftColor, letterSpacing: '0.06em' }}>Left channel</span>
               <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 11, color: state.leftColor }}>{carrierHz} Hz</span>
             </div>
-            <svg width={waveW} height={waveH} viewBox={`0 0 ${waveW} ${waveH}`} preserveAspectRatio="none">
+            <svg width={waveW} height={waveH} viewBox={`0 0 ${waveW} ${waveH}`} style={{ overflow: 'hidden' }}>
               <path d={sinePath(carrierHz, 30, time, 1.2, waveW, waveH)} fill="none" stroke={state.leftColor} strokeWidth={1.5} opacity={0.8} />
             </svg>
           </div>
@@ -130,7 +130,7 @@ export const CognistrationShort: React.FC<CognistrationShortProps> = ({
               <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 11, color: state.rightColor, letterSpacing: '0.06em' }}>Right channel</span>
               <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 11, color: state.rightColor }}>{rightHz.toFixed(1)} Hz</span>
             </div>
-            <svg width={waveW} height={waveH} viewBox={`0 0 ${waveW} ${waveH}`} preserveAspectRatio="none">
+            <svg width={waveW} height={waveH} viewBox={`0 0 ${waveW} ${waveH}`} style={{ overflow: 'hidden' }}>
               <path d={sinePath(rightHz, 30, time, 1.3, waveW, waveH)} fill="none" stroke={state.rightColor} strokeWidth={1.5} opacity={0.75} />
             </svg>
           </div>
@@ -141,7 +141,7 @@ export const CognistrationShort: React.FC<CognistrationShortProps> = ({
               <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 11, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.06em' }}>Perceived rhythm</span>
               <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>{state.hz.toFixed(1)} Hz · {state.label}</span>
             </div>
-            <svg width={waveW} height={waveH} viewBox={`0 0 ${waveW} ${waveH}`} preserveAspectRatio="none">
+            <svg width={waveW} height={waveH} viewBox={`0 0 ${waveW} ${waveH}`} style={{ overflow: 'hidden' }}>
               <defs>
                 <filter id="glow-wave">
                   <feGaussianBlur stdDeviation="3" result="blur" />
@@ -160,7 +160,7 @@ export const CognistrationShort: React.FC<CognistrationShortProps> = ({
           opacity: ctaFade,
         }}>
           <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: 26, fontWeight: 300, color: 'rgba(255,255,255,0.9)', letterSpacing: '-0.01em' }}>
-            Experience it yourself
+            Connect with your higher self
           </div>
           <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(182,221,204,0.15)', borderRadius: 14, padding: '12px 32px', backdropFilter: 'blur(12px)' }}>
             <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 18, fontWeight: 500, color: '#b6ddcc', letterSpacing: '0.03em' }}>
