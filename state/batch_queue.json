@@ -1,0 +1,35 @@
+{
+  "driveFolderId": "REPLACE_WITH_YOUR_DRIVE_FOLDER_ID",
+  "batches": [
+    {
+      "id": "theta-2026-10-14-a",
+      "brainState": "theta",
+      "carrierHz": 200,
+      "durationSec": 65,
+      "status": "pending",
+      "outputFile": null,
+      "driveFileId": null,
+      "createdAt": "2026-10-14T00:00:00Z"
+    },
+    {
+      "id": "alpha-2026-10-14-a",
+      "brainState": "alpha",
+      "carrierHz": 200,
+      "durationSec": 65,
+      "status": "pending",
+      "outputFile": null,
+      "driveFileId": null,
+      "createdAt": "2026-10-14T00:00:00Z"
+    },
+    {
+      "id": "delta-2026-10-14-a",
+      "brainState": "delta",
+      "carrierHz": 200,
+      "durationSec": 60,
+      "status": "pending",
+      "outputFile": null,
+      "driveFileId": null,
+      "createdAt": "2026-10-14T00:00:00Z"
+    }
+  ]
+}

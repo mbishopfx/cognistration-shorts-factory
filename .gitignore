@@ -1,0 +1,24 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Node
+remotion/node_modules/
+remotion/dist/
+
+# Output (videos are large, don't commit)
+output/*.mp4
+output/*.wav
+output/audio/
+
+# Secrets
+scripts/service-account-key.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
