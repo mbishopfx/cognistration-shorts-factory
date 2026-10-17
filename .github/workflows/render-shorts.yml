@@ -6,11 +6,12 @@ name: Render Shorts (cloud)
 # 1 AM / 2 AM / 3 AM US-Central  ->  06:00 / 07:00 / 08:00 UTC
 
 on:
-  # Every other day (day-of-month */2), three runs per day, one brain state each.
-  schedule:
-    - cron: '0 6 */2 * *'   # 1 AM CDT
-    - cron: '0 7 */2 * *'   # 2 AM CDT
-    - cron: '0 8 */2 * *'   # 3 AM CDT
+  # Cloud schedule is OFF: the local pipeline on Matt's Mac is the renderer now.
+  # This workflow stays for manual dispatch only.
+  # schedule:
+  #   - cron: '0 6 */2 * *'
+  #   - cron: '0 7 */2 * *'
+  #   - cron: '0 8 */2 * *'
   workflow_dispatch:
     inputs:
       brain_state:
