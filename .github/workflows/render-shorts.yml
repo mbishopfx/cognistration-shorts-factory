@@ -1,0 +1,133 @@
+name: Render Shorts (cloud)
+
+# Renders the pending Cognistration Shorts on GitHub's runners.
+# Nothing runs on the local machine: no venv, no node_modules, no staged MP4s.
+#
+# 1 AM / 2 AM / 3 AM US-Central  ->  06:00 / 07:00 / 08:00 UTC
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # 1 AM CDT — theta
+    - cron: '0 7 * * *'   # 2 AM CDT — alpha
+    - cron: '0 8 * * *'   # 3 AM CDT — delta
+  workflow_dispatch:
+    inputs:
+      brain_state:
+        description: Brain state to render (leave as "auto" to use the current hour)
+        required: false
+        default: auto
+        type: choice
+        options: [auto, delta, theta, alpha, smr, beta, gamma]
+      render_all:
+        description: Render every pending item in the queue
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: render-shorts
+  cancel-in-progress: false
+
+jobs:
+  render:
+    # Guard against forks picking this up.
+    if: github.repository == 'mbishopfx/cognistration-shorts-factory'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system libraries for headless Chromium
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            ffmpeg \
+            libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+            libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+            libgbm1 libpango-1.0-0 libcairo2 libasound2t64 libglib2.0-0 \
+            fonts-liberation
+
+      - name: Install Remotion dependencies
+        working-directory: remotion
+        run: npm install --no-audit --no-fund
+
+      - name: Install Python dependencies
+        run: pip install --quiet -r requirements.txt
+
+      - name: Write Drive service account key
+        env:
+          GDRIVE_SERVICE_ACCOUNT_JSON: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$GDRIVE_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::error::GDRIVE_SERVICE_ACCOUNT_JSON secret is not set"
+            exit 1
+          fi
+          printf '%s' "$GDRIVE_SERVICE_ACCOUNT_JSON" > scripts/service-account-key.json
+          chmod 600 scripts/service-account-key.json
+
+      - name: Decide which short to render
+        id: pick
+        run: |
+          STATE="${{ github.event.inputs.brain_state }}"
+          if [ "$STATE" = "auto" ] || [ -z "$STATE" ]; then
+            case "$(date -u +%H)" in
+              06) STATE=theta ;;
+              07) STATE=alpha ;;
+              08) STATE=delta ;;
+              *)  STATE=theta ;;
+            esac
+          fi
+          echo "state=$STATE" >> "$GITHUB_OUTPUT"
+          echo "Rendering target: $STATE"
+
+      - name: Render, upload to Drive, and clean up
+        env:
+          COGNISTRATION_SHORTS_DRIVE_FOLDER_ID: ${{ vars.COGNISTRATION_SHORTS_DRIVE_FOLDER_ID }}
+        run: |
+          if [ "${{ github.event.inputs.render_all }}" = "true" ]; then
+            python3 scripts/render_batch.py --all
+          else
+            python3 scripts/render_batch.py --target-state "${{ steps.pick.outputs.state }}"
+          fi
+
+      - name: Commit the updated queue
+        run: |
+          git config user.name  "mbishopfx"
+          git config user.email "mattbishopfx@gmail.com"
+          if git diff --quiet state/batch_queue.json; then
+            echo "Queue unchanged."
+          else
+            git add state/batch_queue.json
+            git commit -m "Update batch queue after cloud render [skip ci]"
+            git push
+          fi
+
+      - name: Report
+        if: always()
+        run: |
+          echo "### Cloud render finished" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Target state: \`${{ steps.pick.outputs.state }}\`" >> "$GITHUB_STEP_SUMMARY"
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          with open("state/batch_queue.json") as f:
+              q = json.load(f)
+          for b in q.get("batches", []):
+              print(f"- `{b['id']}` — **{b['status']}**" +
+                    (f" — driveId `{b['driveFileId']}`" if b.get("driveFileId") else ""))
+          PY
