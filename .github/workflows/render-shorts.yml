@@ -69,16 +69,19 @@ jobs:
       - name: Install Python dependencies
         run: pip install --quiet -r requirements.txt
 
-      - name: Write Drive service account key
+      - name: Check Drive credentials are present
         env:
-          GDRIVE_SERVICE_ACCOUNT_JSON: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+          GOOGLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}
         run: |
-          if [ -z "$GDRIVE_SERVICE_ACCOUNT_JSON" ]; then
-            echo "::error::GDRIVE_SERVICE_ACCOUNT_JSON secret is not set"
-            exit 1
-          fi
-          printf '%s' "$GDRIVE_SERVICE_ACCOUNT_JSON" > scripts/service-account-key.json
-          chmod 600 scripts/service-account-key.json
+          for v in GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET GOOGLE_OAUTH_REFRESH_TOKEN; do
+            if [ -z "${!v}" ]; then
+              echo "::error::$v is not set as a repository secret"
+              exit 1
+            fi
+          done
+          echo "Drive credentials present."
 
       - name: Decide which short to render
         id: pick
@@ -98,6 +101,9 @@ jobs:
       - name: Render, upload to Drive, and clean up
         env:
           COGNISTRATION_SHORTS_DRIVE_FOLDER_ID: ${{ vars.COGNISTRATION_SHORTS_DRIVE_FOLDER_ID }}
+          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+          GOOGLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}
         run: |
           if [ "${{ github.event.inputs.render_all }}" = "true" ]; then
             python3 scripts/render_batch.py --all

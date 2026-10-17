@@ -189,9 +189,15 @@ def main():
                         help="Show what would be rendered and exit")
     args = parser.parse_args()
 
-    if not os.path.exists(os.path.join(SCRIPTS_DIR, "service-account-key.json")):
-        print("ERROR: scripts/service-account-key.json is missing.")
-        print("In CI this is written from the GDRIVE_SERVICE_ACCOUNT_JSON secret.")
+    has_oauth = all(os.environ.get(v) for v in (
+        "GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET",
+        "GOOGLE_OAUTH_REFRESH_TOKEN"))
+    has_key = os.path.exists(os.path.join(SCRIPTS_DIR, "service-account-key.json"))
+    if not (has_oauth or has_key):
+        print("ERROR: no Drive credentials.")
+        print("Set GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET / "
+              "GOOGLE_OAUTH_REFRESH_TOKEN, or place a service account key at "
+              "scripts/service-account-key.json")
         sys.exit(1)
 
     state = load_state()

@@ -13,13 +13,38 @@ KEY_PATH = os.path.join(os.path.dirname(__file__), 'service-account-key.json')
 
 
 def get_drive_service():
-    from google.oauth2 import service_account
-    from googleapiclient.discovery import build
-    from googleapiclient.http import MediaFileUpload
+    """Prefer the OAuth refresh token (real user quota), fall back to a key file.
 
+    A bare service account has no Drive storage quota of its own, so uploads
+    fail with "Service Accounts do not have storage quota" unless the file
+    lands in a Shared Drive. The OAuth path uploads as the real account, which
+    does have quota.
+    """
+    from googleapiclient.discovery import build
+
+    client_id = os.environ.get("GOOGLE_OAUTH_CLIENT_ID")
+    client_secret = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET")
+    refresh_token = os.environ.get("GOOGLE_OAUTH_REFRESH_TOKEN")
+
+    if client_id and client_secret and refresh_token:
+        from google.oauth2.credentials import Credentials
+        from google.auth.transport.requests import Request
+        credentials = Credentials(
+            token=None,
+            refresh_token=refresh_token,
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=client_id,
+            client_secret=client_secret,
+            scopes=SCOPES,
+        )
+        credentials.refresh(Request())
+        return build('drive', 'v3', credentials=credentials)
+
+    from google.oauth2 import service_account
     if not os.path.exists(KEY_PATH):
-        print(f"ERROR: Service account key not found at {KEY_PATH}")
-        print("Place the JSON key file there and retry.")
+        print(f"ERROR: no credentials. Set GOOGLE_OAUTH_CLIENT_ID / "
+              f"GOOGLE_OAUTH_CLIENT_SECRET / GOOGLE_OAUTH_REFRESH_TOKEN, "
+              f"or place a key file at {KEY_PATH}")
         sys.exit(1)
 
     credentials = service_account.Credentials.from_service_account_file(
