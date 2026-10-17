@@ -8,9 +8,9 @@
       "carrierHz": 200,
       "durationSec": 65,
       "background": "2026-08-09-vertical-04-curl-field-weave.html",
-      "status": "pending",
-      "outputFile": null,
-      "driveFileId": null,
+      "status": "done",
+      "outputFile": "output/theta-2026-10-17-a.mp4",
+      "driveFileId": "1ZOVhmczKQJhTSg6y5pHGtA0w2_3BTnnu",
       "createdAt": "2026-10-17T00:00:00Z"
     },
     {
