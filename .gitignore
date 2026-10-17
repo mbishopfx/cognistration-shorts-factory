@@ -11,6 +11,8 @@ remotion/dist/
 output/*.mp4
 output/*.wav
 output/audio/
+remotion/public/audio/
+remotion/public/backgrounds/
 
 # Secrets
 scripts/service-account-key.json

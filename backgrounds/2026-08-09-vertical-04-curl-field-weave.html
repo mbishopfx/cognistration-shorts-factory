@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Curl Field Weave — BishopTech Visuals</title>
+  <meta name="description" content="Original BishopTech generative motion sketch: threads follow a living vector field and leave soft silk traces">
+  <style>
+    :root { color-scheme: dark; }
+    html, body { margin: 0; min-height: 100%; overflow: hidden; background: #070811; }
+    body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    canvas { display: block; width: 100vw !important; height: 100vh !important; }
+    .hud { position: fixed; left: 18px; bottom: 16px; color: rgba(216,228,255,.68); font-size: 11px; letter-spacing: .08em; pointer-events: none; text-transform: uppercase; }
+    .hud strong { color: rgba(216,228,255,.92); }
+    .obs-mode .hud { display: none; }
+  </style>
+  <script src="p5.min.js"></script>
+  <script>p5.disableFriendlyErrors = true;</script>
+</head>
+<body>
+<div class="hud"><strong>Curl Field Weave</strong> · threads follow a living vector field and leave soft silk traces · 9:16 vertical · space pause · r reseed · s save</div>
+<script>
+// BishopTech Visuals / 2026-08-09-vertical-04-curl-field-weave
+// Original variation family: noise flow field + particle advection + fade buffer
+// Orientation: vertical
+// Seed: 801907550
+const CONFIG = { seed: 801907550, paused: false, dpr: 1 };
+const COLORS = {"ink":"#070811","deep":"#10152a","violet":"#8f7cff","cyan":"#67e8f9","coral":"#ff8f70","gold":"#f7d774","mist":"#d8e4ff"};
+if (new URLSearchParams(location.search).get('obs') === '1') document.body.classList.add('obs-mode');
+let phase = 0;
+let artSeed = CONFIG.seed;
+
+function setup() {
+  pixelDensity(CONFIG.dpr);
+  createCanvas(windowWidth, windowHeight);
+  randomSeed(artSeed);
+  noiseSeed(artSeed);
+  colorMode(HSB, 360, 100, 100, 100);
+  resetSketch();
+}
+
+function draw() {
+  if (!CONFIG.paused) {
+    background(228, 48, 5, 8);
+for (const thread of threads) { thread.step(); thread.paint(); }
+    phase += 0.007;
+  }
+}
+
+function keyPressed() {
+  if (key === ' ') CONFIG.paused = !CONFIG.paused;
+  if (key === 'r' || key === 'R') { artSeed = floor(random(999999)); randomSeed(artSeed); noiseSeed(artSeed); resetSketch(); }
+  if (key === 's' || key === 'S') saveCanvas('2026-08-09-vertical-04-curl-field-weave', 'png');
+}
+function windowResized() { resizeCanvas(windowWidth, windowHeight); resetSketch(); }
+function resetSketch() { threads = Array.from({length: 700}, () => new WeaveThread()); }
+
+let threads = [];
+class WeaveThread {
+  constructor() { this.spawn(); }
+  spawn() { this.x = random(width); this.y = random(height); this.px = this.x; this.py = this.y; this.h = random(165, 255); this.life = random(100, 520); }
+  step() {
+    this.px = this.x; this.py = this.y;
+    const n = noise(this.x * .0035, this.y * .0035, phase * .18);
+    const angle = n * TAU * 2.7 + sin(this.y * .002 + phase) * .5;
+    this.x += cos(angle) * 1.8; this.y += sin(angle) * 1.8; this.life--;
+    if (this.life < 0 || this.x < -20 || this.x > width + 20 || this.y < -20 || this.y > height + 20) this.spawn();
+  }
+  paint() { stroke((this.h + phase * 18 + this.x * .02) % 360, 56, 100, 19); strokeWeight(random(.35, 1.2)); line(this.px, this.py, this.x, this.y); }
+}
+
+</script>
+</body>
+</html>

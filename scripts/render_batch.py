@@ -19,9 +19,11 @@ Usage:
 import argparse
 import json
 import os
-import shutil
 import subprocess
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import descriptions  # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATE_PATH = os.path.join(REPO_ROOT, "state", "batch_queue.json")
@@ -31,10 +33,26 @@ PUBLIC_AUDIO_DIR = os.path.join(PUBLIC_DIR, "audio")
 OUTPUT_DIR = os.path.join(REPO_ROOT, "output")
 SCRIPTS_DIR = os.path.join(REPO_ROOT, "scripts")
 
-# The Remotion composition is registered at durationInFrames=1950 / fps=30.
-# Audio is always generated to exactly this length so audio and video end
-# together, whatever durationSec the queue entry carries.
-COMPOSITION_SECONDS = 65.0
+BACKGROUNDS_DIR = os.path.join(REPO_ROOT, "backgrounds")
+PUBLIC_BG_DIR = os.path.join(PUBLIC_DIR, "backgrounds")
+METADATA_DIR = os.path.join(REPO_ROOT, "state", "metadata")
+
+# Session length. The Remotion composition derives its duration from the
+# durationSec prop, and the audio and background are rendered to match, so
+# every artifact in a run ends on the same frame.
+DEFAULT_SECONDS = 65.0
+MIN_SECONDS = 45.0
+MAX_SECONDS = 75.0
+
+# Each brain state gets a different BishopTech HTML sketch as its backdrop.
+DEFAULT_BACKGROUNDS = {
+    "delta": "2026-08-09-vertical-09-gravity-garden.html",
+    "theta": "2026-08-09-vertical-04-curl-field-weave.html",
+    "alpha": "2026-08-09-vertical-05-blue-hour-lattice.html",
+    "smr":   "2026-08-09-vertical-03-infinite-warehouse.html",
+    "beta":  "2026-08-08-vertical-04-curl-field-weave.html",
+    "gamma": "2026-08-07-vertical-04-curl-field-weave.html",
+}
 
 # Carrier stays at 200 Hz; only the beat frequency changes per brain state.
 CARRIER_HZ = 200.0
@@ -101,25 +119,41 @@ def render_one(state, batch):
     batch_id = batch["id"]
     brain_state = batch.get("brainState", "theta")
     beat = BEAT_HZ.get(brain_state, 6.0)
+    seconds = float(batch.get("durationSec") or DEFAULT_SECONDS)
+    seconds = max(MIN_SECONDS, min(MAX_SECONDS, seconds))
+    background = batch.get("background") or DEFAULT_BACKGROUNDS.get(brain_state)
+    background_html = os.path.join(BACKGROUNDS_DIR, background) if background else None
 
     print("\n" + "=" * 62)
-    print(f"  {batch_id}  ({brain_state}, beat {beat} Hz)")
+    print(f"  {batch_id}  ({brain_state}, beat {beat} Hz, {seconds:.0f}s)")
+    print(f"  background: {background}")
     print("=" * 62)
 
     os.makedirs(PUBLIC_AUDIO_DIR, exist_ok=True)
+    os.makedirs(PUBLIC_BG_DIR, exist_ok=True)
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     wav_path = os.path.join(OUTPUT_DIR, f"{batch_id}.wav")
     mp3_path = os.path.join(PUBLIC_AUDIO_DIR, f"{batch_id}.mp3")
+    bg_path = os.path.join(PUBLIC_BG_DIR, f"{batch_id}.mp4")
     mp4_path = os.path.join(OUTPUT_DIR, f"{batch_id}.mp4")
+
+    # YouTube copy for this run, written into the repo so the posting machine
+    # picks up the finished title and description instead of writing its own.
+    meta = descriptions.build(brain_state, seconds, CARRIER_HZ, beat)
+    metadata_path = os.path.join(METADATA_DIR, f"{batch_id}.json")
+    os.makedirs(METADATA_DIR, exist_ok=True)
+    with open(metadata_path, "w") as fh:
+        json.dump(meta, fh, indent=2)
+    print(f"  title: {meta['title']}")
 
     set_status(state, batch_id, "rendering")
 
     try:
-        # 1. Binaural audio
+        # 1. Binaural audio for this batch's brain state
         run([sys.executable, os.path.join(SCRIPTS_DIR, "generate_audio.py"),
              "--output", wav_path,
-             "--duration", str(COMPOSITION_SECONDS),
+             "--duration", str(seconds),
              "--carrier", str(CARRIER_HZ),
              "--beat", str(beat)])
 
@@ -128,11 +162,20 @@ def render_one(state, batch):
              "-codec:a", "libmp3lame", "-b:a", "192k", mp3_path])
         os.remove(wav_path)
 
-        # 3. Render — audioPath is relative to remotion/public/
+        # 3. Turn the BishopTech HTML sketch into the background video
+        if background_html and os.path.exists(background_html):
+            run([sys.executable, os.path.join(SCRIPTS_DIR, "render_background.py"),
+                 "--html", background_html,
+                 "--out", bg_path,
+                 "--duration", str(seconds)])
+
+        # 4. Render — audioPath and backgroundPath are relative to remotion/public/
         props = json.dumps({
             "brainState": brain_state,
             "audioPath": f"audio/{batch_id}.mp3",
+            "backgroundPath": f"backgrounds/{batch_id}.mp4",
             "carrierHz": CARRIER_HZ,
+            "durationSec": seconds,
         })
         run(["npx", "remotion", "render", "index.tsx", "CognistrationShort",
              mp4_path, f"--props={props}"], cwd=REMOTION_DIR)
@@ -149,7 +192,8 @@ def render_one(state, batch):
         set_status(state, batch_id, "uploading")
         out = subprocess.run(
             [sys.executable, os.path.join(SCRIPTS_DIR, "upload_to_drive.py"),
-             mp4_path, "--id", batch_id, "--state", brain_state, "--cleanup"],
+             mp4_path, "--id", batch_id, "--state", brain_state, "--cleanup",
+             "--metadata", metadata_path],
             text=True, capture_output=True)
         print(out.stdout)
         if out.returncode != 0:
@@ -171,7 +215,7 @@ def render_one(state, batch):
 
     finally:
         # Nothing rendered here should survive the run.
-        for leftover in (wav_path, mp3_path, mp4_path):
+        for leftover in (wav_path, mp3_path, bg_path, mp4_path):
             if os.path.exists(leftover):
                 os.remove(leftover)
                 print(f"  cleaned up {os.path.relpath(leftover, REPO_ROOT)}")

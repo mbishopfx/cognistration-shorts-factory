@@ -67,8 +67,14 @@ def get_folder_id():
     return folder_id
 
 
-def upload(file_path: str, batch_id: str, brain_state: str, cleanup: bool = False):
-    """Upload a video to the shared Drive folder."""
+def upload(file_path: str, batch_id: str, brain_state: str, cleanup: bool = False,
+           metadata_path: str = None):
+    """Upload a video to the shared Drive folder.
+
+    When a metadata file is supplied, its title travels in appProperties and its
+    full description travels in the Drive file's description field, so the
+    machine that posts to YouTube can read the finished copy straight off Drive.
+    """
     if not os.path.exists(file_path):
         print(f"ERROR: File not found: {file_path}")
         sys.exit(1)
@@ -77,21 +83,33 @@ def upload(file_path: str, batch_id: str, brain_state: str, cleanup: bool = Fals
     file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
     folder_id = get_folder_id()
 
+    title = None
+    description = None
+    if metadata_path and os.path.exists(metadata_path):
+        with open(metadata_path) as fh:
+            meta = json.load(fh)
+        title = meta.get('title')
+        description = meta.get('description')
+
     print(f"Uploading: {file_name} ({file_size_mb:.1f} MB)")
     print(f"  Brain state: {brain_state}")
     print(f"  Batch ID:    {batch_id}")
     print(f"  Folder ID:   {folder_id}")
+    if title:
+        print(f"  Title:       {title}")
 
     service = get_drive_service()
+
+    app_props = {'brainState': brain_state, 'batchId': batch_id}
+    if title:
+        # Drive caps each appProperty value at 124 bytes.
+        app_props['title'] = title[:120]
 
     file_metadata = {
         'name': file_name,
         'parents': [folder_id],
-        'description': f'Cognistration Short — {brain_state} — batch {batch_id}',
-        'appProperties': {
-            'brainState': brain_state,
-            'batchId': batch_id,
-        },
+        'description': description or f'Cognistration Short, {brain_state}, batch {batch_id}',
+        'appProperties': app_props,
     }
 
     media = service.files().create(
@@ -122,6 +140,9 @@ if __name__ == '__main__':
                         help='Brain state (theta, alpha, delta, etc.)')
     parser.add_argument('--cleanup', action='store_true',
                         help='Delete local file after successful upload')
+    parser.add_argument('--metadata', dest='metadata_path', default=None,
+                        help='JSON file with title/description to stamp on the upload')
     args = parser.parse_args()
 
-    upload(args.file_path, args.batch_id, args.brain_state, args.cleanup)
+    upload(args.file_path, args.batch_id, args.brain_state, args.cleanup,
+           args.metadata_path)

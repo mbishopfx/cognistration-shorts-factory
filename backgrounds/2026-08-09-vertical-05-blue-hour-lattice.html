@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Blue Hour Lattice — BishopTech Visuals</title>
+  <meta name="description" content="Original BishopTech generative motion sketch: a loose lattice tilts, expands, and catches light at its intersections">
+  <style>
+    :root { color-scheme: dark; }
+    html, body { margin: 0; width: 100%; height: 100%; min-width: 100%; min-height: 100%; overflow: hidden; background: hsl(220, 52%, 4%); }
+    body { position: fixed; inset: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    canvas { position: fixed !important; inset: 0 !important; display: block !important; width: 100vw !important; height: 100vh !important; min-width: 100vw !important; min-height: 100vh !important; }
+    .hud { position: fixed; left: 18px; bottom: 16px; z-index: 3; color: rgba(235,243,255,.62); font-size: 11px; letter-spacing: .08em; pointer-events: none; text-transform: uppercase; }
+    .hud strong { color: rgba(255,255,255,.96); }
+    .obs-mode .hud { display: none; }
+  </style>
+  <script src="p5.min.js"></script>
+  <script>p5.disableFriendlyErrors = true;</script>
+</head>
+<body>
+<div class="hud"><strong>Blue Hour Lattice</strong> · a loose lattice tilts, expands, and catches light at its intersections · 9:16 vertical · full bleed · space pause · r reseed · s save</div>
+<script>
+// BishopTech Visuals / 2026-08-09-vertical-05-blue-hour-lattice
+// Original variation family: diagonal lattice + responsive shear
+// Orientation: vertical
+// Seed: 4155815595
+const CONFIG = { seed: 4155815595, kind: 'grid', density: 36, speed: 0.009, scale: 1.32, paused: false, dpr: 1 };
+const THEME = {"name":"Cobalt Signal","bg":220,"hues":[352,16,38,152],"sat":80,"bri":100};
+if (new URLSearchParams(location.search).get('obs') === '1') document.body.classList.add('obs-mode');
+let phase = 0;
+let artSeed = CONFIG.seed;
+let particles = [];
+let strands = [];
+let nodes = [];
+let bars = [];
+let route = [];
+
+function setup() {
+  pixelDensity(CONFIG.dpr);
+  createCanvas(windowWidth, windowHeight);
+  randomSeed(artSeed);
+  noiseSeed(artSeed);
+  colorMode(HSB, 360, 100, 100, 100);
+  resetSketch();
+}
+
+function draw() {
+  if (CONFIG.paused) return;
+  if (CONFIG.kind === 'flow') drawFlow();
+  if (CONFIG.kind === 'prism') drawPrism();
+  if (CONFIG.kind === 'grid') drawGrid();
+  if (CONFIG.kind === 'orbit') drawOrbit();
+  if (CONFIG.kind === 'rain') drawRain();
+  if (CONFIG.kind === 'constellation') drawConstellation();
+  phase += CONFIG.speed;
+}
+
+function hue(offset = 0) { return (THEME.hues[Math.abs(floor(offset)) % THEME.hues.length] + offset * .17 + phase * 10 + 360) % 360; }
+function alphaFade(amount) { return background(THEME.bg, 55, 4, amount); }
+function resetSketch() {
+  particles = []; strands = []; nodes = []; bars = []; route = [];
+  const count = CONFIG.density;
+  if (CONFIG.kind === 'flow') for (let i = 0; i < count; i++) strands.push(new FlowStrand(i));
+  if (CONFIG.kind === 'orbit') for (let i = 0; i < count; i++) particles.push(new OrbitParticle(i));
+  if (CONFIG.kind === 'rain') for (let i = 0; i < count; i++) bars.push(new RainBar(i));
+  if (CONFIG.kind === 'constellation') {
+    for (let i = 0; i < count; i++) nodes.push(new SkyNode(i));
+    for (let i = 0; i < 12; i++) route.push({ x: random(width), y: random(height) });
+  }
+}
+
+function keyPressed() {
+  if (key === ' ') CONFIG.paused = !CONFIG.paused;
+  if (key === 'r' || key === 'R') { artSeed = floor(random(999999999)); randomSeed(artSeed); noiseSeed(artSeed); resetSketch(); }
+  if (key === 's' || key === 'S') saveCanvas('2026-08-09-vertical-05-blue-hour-lattice', 'png');
+}
+function windowResized() { resizeCanvas(windowWidth, windowHeight); resetSketch(); }
+
+function drawFlow() {
+  alphaFade(9);
+  for (const strand of strands) { strand.step(); strand.paint(); }
+}
+class FlowStrand {
+  constructor(index) { this.index = index; this.spawn(); }
+  spawn() { this.x = random(-30, width + 30); this.y = random(-30, height + 30); this.px = this.x; this.py = this.y; this.life = random(160, 780); this.h = random(0, THEME.hues.length); this.weight = random(.35, 1.8); }
+  step() {
+    this.px = this.x; this.py = this.y;
+    const warp = noise(this.x * .0028, this.y * .0028, phase * .12);
+    const cross = noise(this.y * .004, this.x * .002, phase * .08);
+    const angle = warp * TAU * 2.7 + sin(this.y * .0018 + phase * 1.4) * .55 + (cross - .5) * .8;
+    const stride = CONFIG.scale * (.9 + noise(this.index * .02, phase * .2) * .7);
+    this.x += cos(angle) * stride; this.y += sin(angle) * stride; this.life--;
+    if (this.life < 0 || this.x < -80 || this.x > width + 80 || this.y < -80 || this.y > height + 80) this.spawn();
+  }
+  paint() { stroke(hue(this.h + this.x * .002), THEME.sat, THEME.bri, 14 + (this.index % 7) * 2); strokeWeight(this.weight); line(this.px, this.py, this.x, this.y); }
+}
+
+function drawPrism() {
+  alphaFade(18);
+  noFill();
+  for (let band = 0; band < CONFIG.density; band++) {
+    const baseY = (band / CONFIG.density) * height;
+    stroke(hue(band), THEME.sat - (band % 4) * 7, THEME.bri, 12 + (band % 6) * 3);
+    strokeWeight(.65 + (band % 5) * .2);
+    beginShape();
+    for (let x = -40; x <= width + 40; x += max(10, width / 90)) {
+      const wave = sin(x * .006 * CONFIG.scale + phase * (1.1 + band * .003) + band * .19) * height * .055;
+      const fold = sin(x * .018 - phase * .7 + band * .47) * height * .018;
+      curveVertex(x, baseY + wave + fold);
+    }
+    endShape();
+  }
+  for (let i = 0; i < 9; i++) {
+    const y = height * (.12 + i * .1) + sin(phase * .8 + i) * height * .07;
+    stroke(hue(i + 2), THEME.sat, THEME.bri, 8); line(0, y, width, y + sin(phase + i) * 20);
+  }
+}
+
+function drawGrid() {
+  alphaFade(24);
+  const vx = width * (.5 + sin(phase * .42) * .16);
+  const vy = height * (.42 + cos(phase * .31) * .1);
+  strokeWeight(1);
+  for (let i = -18; i <= 18; i++) {
+    const edgeX = width * (i / 18);
+    stroke(hue(i + 20), THEME.sat, THEME.bri, 18);
+    line(vx, vy, edgeX, height * 1.08);
+  }
+  for (let row = 1; row < 34; row++) {
+    const t = pow(row / 34, 1.55);
+    const y = lerp(vy, height * 1.08, t);
+    const spread = lerp(10, width * 1.2, t);
+    stroke(hue(row + 4), THEME.sat - 10, THEME.bri, 13 + t * 20);
+    line(vx - spread, y, vx + spread, y + sin(phase + row) * 8);
+  }
+  for (let i = 0; i < 20; i++) {
+    const x = (i / 20) * width + sin(phase * .5 + i) * width * .04;
+    stroke(hue(i + 1), THEME.sat, THEME.bri, 10); line(x, 0, x + cos(phase + i) * 80, height);
+  }
+}
+
+function drawOrbit() {
+  alphaFade(11);
+  translate(width / 2, height / 2);
+  for (const particle of particles) { particle.step(); particle.paint(); }
+  resetMatrix();
+  noStroke();
+  for (let i = 0; i < 5; i++) {
+    const x = width * (.5 + sin(phase * .4 + i * 1.7) * .28);
+    const y = height * (.5 + cos(phase * .33 + i) * .26);
+    fill(hue(i + 2), THEME.sat, THEME.bri, 16); circle(x, y, 8 + i * 4);
+  }
+}
+class OrbitParticle {
+  constructor(index) { this.index = index; this.reset(); }
+  reset() { this.r = random(40, max(width, height) * .72); this.a = random(TAU); this.z = random(.35, 1.3); this.h = random(THEME.hues.length); this.life = random(220, 1100); }
+  step() {
+    const pullX = sin(phase * .42) * width * .22; const pullY = cos(phase * .31) * height * .18;
+    const dx = pullX - cos(this.a) * this.r; const dy = pullY - sin(this.a) * this.r;
+    this.a += (.001 + noise(this.r * .003, phase * .2) * .012) * this.z;
+    this.r += (dx * .00016 - dy * .00004) * CONFIG.scale; this.life--;
+    if (this.life < 0 || this.r < 15 || this.r > max(width, height) * .9) this.reset();
+  }
+  paint() { const x = cos(this.a + phase * .12) * this.r; const y = sin(this.a + phase * .12) * this.r; stroke(hue(this.h + this.r * .01), THEME.sat, THEME.bri, 30); strokeWeight(this.z * 1.4); point(x, y); }
+}
+
+function drawRain() {
+  alphaFade(16);
+  for (const bar of bars) { bar.step(); bar.paint(); }
+  blendMode(ADD); noStroke();
+  for (let i = 0; i < 10; i++) { fill(hue(i + 3), THEME.sat, THEME.bri, 8); rect(0, height * (.08 + i * .1), width, 2 + sin(phase + i) * 2); }
+  blendMode(BLEND);
+}
+class RainBar {
+  constructor(index) { this.index = index; this.reset(); }
+  reset() { this.x = random(-60, width + 60); this.y = random(-height, height); this.len = random(20, height * .42); this.speed = random(.8, 4.4) * CONFIG.scale; this.h = random(THEME.hues.length); this.angle = random(-.16, .16); }
+  step() { this.y += this.speed; this.x += sin(phase * .7 + this.index) * .45; if (this.y > height + this.len) this.reset(); }
+  paint() { push(); translate(this.x, this.y); rotate(this.angle); stroke(hue(this.h), THEME.sat, THEME.bri, 24 + (this.index % 5) * 5); strokeWeight(.6 + this.index % 4 * .45); line(0, 0, 0, this.len); pop(); }
+}
+
+function drawConstellation() {
+  alphaFade(20);
+  for (const node of nodes) { node.step(); node.paint(); }
+  noFill();
+  for (let i = 0; i < route.length - 1; i++) {
+    const a = route[i], b = route[i + 1];
+    stroke(hue(i + 1), THEME.sat, THEME.bri, 24); strokeWeight(1.2); line(a.x, a.y, b.x, b.y);
+    a.x += sin(phase * .4 + i) * .18; a.y += cos(phase * .35 + i) * .18;
+    b.x += cos(phase * .3 + i) * .14; b.y += sin(phase * .45 + i) * .14;
+  }
+}
+class SkyNode {
+  constructor(index) { this.index = index; this.x = random(width); this.y = random(height); this.px = this.x; this.py = this.y; this.r = random(1, 4.5); this.h = random(THEME.hues.length); }
+  step() { this.px = this.x; this.py = this.y; this.x += (noise(this.index * .07, phase * .12) - .5) * CONFIG.scale * 1.6; this.y += (noise(this.index * .08 + 30, phase * .1) - .5) * CONFIG.scale * 1.6; if (this.x < -30) this.x = width + 30; if (this.x > width + 30) this.x = -30; if (this.y < -30) this.y = height + 30; if (this.y > height + 30) this.y = -30; }
+  paint() { noStroke(); fill(hue(this.h), THEME.sat, THEME.bri, 62); circle(this.x, this.y, this.r * 2); stroke(hue(this.h + 1), THEME.sat, THEME.bri, 12); line(this.px, this.py, this.x, this.y); }
+}
+</script>
+</body>
+</html>
