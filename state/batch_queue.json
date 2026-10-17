@@ -6,7 +6,7 @@
       "brainState": "theta",
       "carrierHz": 200,
       "durationSec": 65,
-      "status": "failed",
+      "status": "pending",
       "outputFile": null,
       "driveFileId": null,
       "createdAt": "2026-10-14T00:00:00Z"
