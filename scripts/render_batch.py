@@ -215,6 +215,8 @@ def main():
 
     ok = sum(1 for b in items if render_one(state, b))
     print(f"\nFinished: {ok}/{len(items)} rendered and uploaded.")
+    if ok < len(items):
+        sys.exit(1)
 
 
 if __name__ == "__main__":

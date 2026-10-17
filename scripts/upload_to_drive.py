@@ -28,11 +28,16 @@ def get_drive_service():
 
 
 def get_folder_id():
-    with open(STATE_PATH) as f:
-        state = json.load(f)
-    folder_id = state.get('driveFolderId')
+    # An environment variable wins, so CI can supply the folder id without
+    # it having to live in this repo.
+    folder_id = os.environ.get("COGNISTRATION_SHORTS_DRIVE_FOLDER_ID")
     if not folder_id:
-        print("ERROR: driveFolderId not set in state/batch_queue.json")
+        with open(STATE_PATH) as f:
+            state = json.load(f)
+        folder_id = state.get('driveFolderId')
+    if not folder_id or folder_id == 'REPLACE_WITH_YOUR_DRIVE_FOLDER_ID':
+        print("ERROR: driveFolderId not set. Set COGNISTRATION_SHORTS_DRIVE_FOLDER_ID "
+              "or fill in state/batch_queue.json")
         sys.exit(1)
     return folder_id
 
