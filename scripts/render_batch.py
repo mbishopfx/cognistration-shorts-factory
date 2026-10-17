@@ -162,18 +162,26 @@ def render_one(state, batch):
              "-codec:a", "libmp3lame", "-b:a", "192k", mp3_path])
         os.remove(wav_path)
 
-        # 3. Turn the BishopTech HTML sketch into the background video
+        # 3. Turn the BishopTech HTML sketch into the background video.
+        #    If the sandbox cannot run or download Chromium, render without a
+        #    backdrop rather than losing the whole run.
+        bg_prop = ""
         if background_html and os.path.exists(background_html):
-            run([sys.executable, os.path.join(SCRIPTS_DIR, "render_background.py"),
-                 "--html", background_html,
-                 "--out", bg_path,
-                 "--duration", str(seconds)])
+            try:
+                run([sys.executable, os.path.join(SCRIPTS_DIR, "render_background.py"),
+                     "--html", background_html,
+                     "--out", bg_path,
+                     "--duration", str(seconds)])
+                bg_prop = f"backgrounds/{batch_id}.mp4"
+            except Exception as exc:
+                print(f"  ! background render skipped ({exc}); rendering without a backdrop")
+                bg_prop = ""
 
         # 4. Render — audioPath and backgroundPath are relative to remotion/public/
         props = json.dumps({
             "brainState": brain_state,
             "audioPath": f"audio/{batch_id}.mp3",
-            "backgroundPath": f"backgrounds/{batch_id}.mp4",
+            "backgroundPath": bg_prop,
             "carrierHz": CARRIER_HZ,
             "durationSec": seconds,
         })

@@ -35,7 +35,7 @@ const STATE_INFO: Record<string, StateInfo> = {
 export interface CognistrationShortProps {
   brainState: string;
   audioPath: string;
-  backgroundPath: string;
+  backgroundPath?: string;
   carrierHz?: number;
   durationSec?: number;
 }
@@ -160,14 +160,17 @@ export const CognistrationShort: React.FC<CognistrationShortProps> = ({
     <AbsoluteFill style={{ backgroundColor: '#070811' }}>
       <Audio src={staticFile(audioPath)} />
 
-      {/* ── LAYER 1: the HTML animation, running behind everything ── */}
-      <AbsoluteFill style={{ opacity: 0.62 }}>
-        <OffthreadVideo
-          src={staticFile(backgroundPath)}
-          muted
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        />
-      </AbsoluteFill>
+      {/* ── LAYER 1: the HTML animation, running behind everything ──
+          Optional: a sandbox without a working Chromium can render without it. */}
+      {backgroundPath ? (
+        <AbsoluteFill style={{ opacity: 0.62 }}>
+          <OffthreadVideo
+            src={staticFile(backgroundPath)}
+            muted
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        </AbsoluteFill>
+      ) : null}
 
       {/* ── LAYER 2: scrim so the machine UI and copy stay readable ── */}
       <AbsoluteFill
