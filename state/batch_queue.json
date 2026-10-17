@@ -6,9 +6,9 @@
       "brainState": "theta",
       "carrierHz": 200,
       "durationSec": 65,
-      "status": "pending",
-      "outputFile": null,
-      "driveFileId": null,
+      "status": "done",
+      "outputFile": "output/theta-2026-10-14-a.mp4",
+      "driveFileId": "1oaw7NimYHgtkNUSEtxoiHbLQuNzyeTkB",
       "createdAt": "2026-10-14T00:00:00Z"
     },
     {
