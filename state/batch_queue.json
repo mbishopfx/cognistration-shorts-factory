@@ -19,9 +19,9 @@
       "carrierHz": 200,
       "durationSec": 60,
       "background": "2026-08-09-vertical-05-blue-hour-lattice.html",
-      "status": "pending",
-      "outputFile": null,
-      "driveFileId": null,
+      "status": "done",
+      "outputFile": "output/alpha-2026-10-17-a.mp4",
+      "driveFileId": "1hU0pwqxT00ffQuTXikmeh2MST2PjcMma",
       "createdAt": "2026-10-17T00:00:00Z"
     },
     {
@@ -30,9 +30,9 @@
       "carrierHz": 200,
       "durationSec": 65,
       "background": "2026-08-09-vertical-09-gravity-garden.html",
-      "status": "pending",
-      "outputFile": null,
-      "driveFileId": null,
+      "status": "done",
+      "outputFile": "output/delta-2026-10-17-a.mp4",
+      "driveFileId": "16CTdLiMmd08xvhN-Y5_0Kw6lNHrZwIiJ",
       "createdAt": "2026-10-17T00:00:00Z"
     }
   ]
